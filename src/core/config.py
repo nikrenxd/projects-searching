@@ -1,13 +1,13 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import PostgresDsn, RedisDsn
+
 
 class BaseConfig(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env")
 
 
 class Config(BaseConfig):
-    DB_URL: PostgresDsn
-    REDIS_URL: RedisDsn
+    DB_URL: str
+    REDIS_URL: str
 
     BASE_URL: str
 
