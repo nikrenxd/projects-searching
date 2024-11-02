@@ -3,7 +3,7 @@ from datetime import datetime
 from pydantic import BaseModel
 
 
-class Project(BaseModel):
+class ProjectSchema(BaseModel):
     id: int
     name: str
     description: str | None

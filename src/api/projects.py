@@ -13,6 +13,12 @@ async def search_projects(
     project_name: str,
     session: Annotated[get_session, Depends()],
 ):
-    results = await ProjectService.search_projects(session, project_name)
+    results = await ProjectService.search_projects(query=project_name)
 
-    return results
+    projects = await ProjectService.save_projects(
+        session,
+        projects=results,
+        query=project_name,
+    )
+
+    return projects
