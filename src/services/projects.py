@@ -1,8 +1,9 @@
 from httpx import AsyncClient
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
+from src.core.logger import logger
 from src.models.projects import Project
 from src.schemas.projects import ProjectSchema
 
@@ -33,10 +34,14 @@ class ProjectService:
     ):
         insert_projects = [Project(**data.model_dump()) for data in projects]
 
-        session.add_all(insert_projects)
-        await session.commit()
+        get_projects_query = select(Project).where(Project.name.ilike(f"%{query}%"))
 
-        stmt = select(Project).where(Project.name.ilike(f"%{query}%"))
-        projects = await session.execute(stmt)
+        try:
+            session.add_all(insert_projects)
+            await session.commit()
 
-        return projects.scalars().all()
+            projects = await session.execute(get_projects_query)
+
+            return projects.scalars().all()
+        except SQLAlchemyError as e:
+            logger.error(f"Error getting projects from DB: {e.args}")

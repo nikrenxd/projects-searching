@@ -7,6 +7,8 @@ from src.services.projects import ProjectService
 
 project_router = APIRouter(prefix="/search", tags=["project"])
 
+# TODO: Add rate limit
+
 
 @project_router.get("/", status_code=status.HTTP_200_OK)
 async def search_projects(
