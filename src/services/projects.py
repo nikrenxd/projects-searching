@@ -20,6 +20,7 @@ class ProjectService:
     @staticmethod
     async def search_projects(query: str) -> list[ProjectSchema]:
         async with AsyncClient() as client:
+            logger.debug(f"Searching projects for {query}")
             response = await client.get(
                 f"https://gitlab.com/api/v4/projects/?search={query}"
             )
@@ -60,6 +61,7 @@ class ProjectService:
             projects_quantity = result.scalar()
 
             if projects_quantity > 0:
+                logger.debug("Return existing projects")
                 return await get_projects(session, get_projects_query)
 
             session.add_all(projects_data)
@@ -67,5 +69,5 @@ class ProjectService:
 
             return await get_projects(session, get_projects_query)
 
-        except SQLAlchemyError as e:
-            logger.error(f"Error getting projects from DB: {e.args}")
+        except SQLAlchemyError:
+            logger.error("Error getting projects from DB", exc_info=True)
