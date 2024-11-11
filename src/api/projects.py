@@ -1,17 +1,18 @@
 from typing import Annotated
 
-from fastapi import APIRouter, status, Depends
+from fastapi import APIRouter, status, Depends, Request
 
 from src.core.db import get_session
+from src.core.limiter import limiter
 from src.services.projects import ProjectService
 
 project_router = APIRouter(prefix="/search", tags=["project"])
 
-# TODO: Add rate limit
-
 
 @project_router.get("/", status_code=status.HTTP_200_OK)
+@limiter.limit("2/minute")
 async def search_projects(
+    request: Request,
     project_name: str,
     session: Annotated[get_session, Depends()],
 ):

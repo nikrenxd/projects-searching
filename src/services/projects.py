@@ -1,7 +1,7 @@
 from typing import Sequence
 
 from httpx import AsyncClient
-from sqlalchemy import select
+from sqlalchemy import select, func, Select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.logger import logger
 from src.models.projects import Project
 from src.schemas.projects import ProjectSchema
+
+
+async def get_projects(session: AsyncSession, query: Select) -> Sequence[Project]:
+    projects = await session.execute(query)
+    return projects.scalars().all()
 
 
 class ProjectService:
@@ -37,16 +42,30 @@ class ProjectService:
         projects: list[ProjectSchema],
         query: str,
     ) -> Sequence[Project]:
-        insert_projects = [Project(**data.model_dump()) for data in projects]
+        projects_data = [Project(**data.model_dump()) for data in projects]
+        ilike_search = f"%{query}%"
 
-        get_projects_query = select(Project).where(Project.name.ilike(f"%{query}%"))
+        # TODO: Try to optimize queries
+        count_projects_query = (
+            select(
+                func.count(),
+            )
+            .select_from(Project)
+            .where(Project.name.ilike(ilike_search))
+        )
+        get_projects_query = select(Project).where(Project.name.ilike(ilike_search))
 
         try:
-            session.add_all(insert_projects)
+            result = await session.execute(count_projects_query)
+            projects_quantity = result.scalar()
+
+            if projects_quantity > 0:
+                return await get_projects(session, get_projects_query)
+
+            session.add_all(projects_data)
             await session.commit()
 
-            projects = await session.execute(get_projects_query)
+            return await get_projects(session, get_projects_query)
 
-            return projects.scalars().all()
         except SQLAlchemyError as e:
             logger.error(f"Error getting projects from DB: {e.args}")
