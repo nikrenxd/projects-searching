@@ -1,7 +1,10 @@
+from typing import Sequence
+
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+
 
 from src.core.logger import logger
 from src.models.projects import Project
@@ -30,8 +33,10 @@ class ProjectService:
 
     @staticmethod
     async def save_projects(
-        session: AsyncSession, projects: list[ProjectSchema], query: str
-    ):
+        session: AsyncSession,
+        projects: list[ProjectSchema],
+        query: str,
+    ) -> Sequence[Project]:
         insert_projects = [Project(**data.model_dump()) for data in projects]
 
         get_projects_query = select(Project).where(Project.name.ilike(f"%{query}%"))

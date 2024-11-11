@@ -29,6 +29,11 @@ async def prepare_db():
         await conn.run_sync(Base.metadata.create_all)
 
 
+@pytest.fixture(scope="session")
+async def session():
+    async with Session() as session:
+        yield session
+
 
 @pytest.fixture(scope="session")
 async def client(app, base_url, **kwargs):

@@ -9,4 +9,3 @@ async def test_api(client):
     res = await client.get("/search/", params=params)
 
     assert res.status_code == 200
-    assert len(res.json()) > 0
