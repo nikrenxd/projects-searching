@@ -1,27 +1,39 @@
-from typing import Annotated
+from fastapi import APIRouter, Request
 
-from fastapi import APIRouter, status, Depends, Request
+from pydantic import TypeAdapter
 
-from src.core.db import get_session
+from src.api.dependencies import SessionDep, RedisDep
 from src.core.limiter import limiter
+from src.schemas.projects import ProjectSchema
 from src.services.projects import ProjectService
 
 project_router = APIRouter(prefix="/search", tags=["project"])
 
 
-@project_router.get("/", status_code=status.HTTP_200_OK)
-@limiter.limit("2/minute")
+@project_router.get("/", response_model=list[ProjectSchema])
+@limiter.limit("2/second")
 async def search_projects(
     request: Request,
     project_name: str,
-    session: Annotated[get_session, Depends()],
+    session: SessionDep,
+    r: RedisDep,
 ):
-    results = await ProjectService.search_projects(query=project_name)
+    cached_result = await r.get("projects")
+    type_adapter = TypeAdapter(list[ProjectSchema])
 
-    projects = await ProjectService.save_projects(
-        session,
-        projects=results,
-        query=project_name,
-    )
+    if not cached_result:
+        fetched_data = await ProjectService.find_projects(query=project_name)
 
-    return projects
+        results = await ProjectService.save_projects(
+            session=session,
+            projects=fetched_data,
+            query=project_name,
+        )
+
+        encoded_data = type_adapter.dump_json(fetched_data).decode("utf-8")
+
+        await r.set("projects", encoded_data, 15)
+
+        return results
+
+    return type_adapter.validate_json(cached_result)

@@ -1,5 +1,6 @@
 from typing import Sequence
 
+import httpx
 from httpx import AsyncClient
 from sqlalchemy import select, func, Select
 from sqlalchemy.exc import SQLAlchemyError
@@ -18,24 +19,27 @@ async def get_projects(session: AsyncSession, query: Select) -> Sequence[Project
 
 class ProjectService:
     @staticmethod
-    async def search_projects(query: str) -> list[ProjectSchema]:
-        async with AsyncClient() as client:
-            logger.debug(f"Searching projects for {query}")
-            response = await client.get(
-                f"https://gitlab.com/api/v4/projects/?search={query}"
-            )
-            projects = response.json()
-
-            results = [
-                ProjectSchema(
-                    id=project["id"],
-                    name=project["name"],
-                    description=project["description"],
-                    last_activity=project["last_activity_at"],
+    async def find_projects(query: str) -> list[ProjectSchema] | None:
+        try:
+            async with AsyncClient() as client:
+                logger.debug(f"Searching projects for {query}")
+                response = await client.get(
+                    "https://gitlab.com/api/v4/projects/",
+                    params={"search": query},
                 )
-                for project in projects
-            ]
-            return results
+                data = response.json()
+
+                return [
+                    ProjectSchema(
+                        id=project["id"],
+                        name=project["name"],
+                        description=project["description"],
+                        last_activity=project["last_activity_at"],
+                    )
+                    for project in data
+                ]
+        except httpx.RequestError:
+            logger.error("Error on request happen", exc_info=True)
 
     @staticmethod
     async def save_projects(
