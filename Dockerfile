@@ -1,7 +1,11 @@
 FROM python:3.11.9-slim-bullseye
 
+COPY --from=ghcr.io/astral-sh/uv:0.5.7 /uv /uvx /bin/
+
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
+ENV UV_SYSTEM_PYTHON=1
+
 
 WORKDIR /app
 
@@ -10,14 +14,13 @@ RUN apt update -y && \
     gcc \
     musl-dev
 
-ADD pyproject.toml /app
 ADD alembic.ini /app
 
 RUN pip install --upgrade pip
-RUN pip install poetry
 
-RUN poetry config virtualenvs.create false
-RUN poetry install --no-root --no-interaction --no-ansi
+COPY ./pyproject.toml ./uv.lock /app/
+RUN uv pip install -r pyproject.toml
+
 
 COPY /src/* /app/src/
 COPY /tests/* /app/tests/
