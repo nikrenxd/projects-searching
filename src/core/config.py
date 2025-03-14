@@ -20,5 +20,7 @@ class Config(BaseConfig):
 
     BASE_URL: str = Field(default="http:///")
 
+    FE_TRUSTED_URL: str
+
 
 settings = Config()
